@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+go install cmd/siu.go
+cp bin/siuu /usr/local/bin/siuu
