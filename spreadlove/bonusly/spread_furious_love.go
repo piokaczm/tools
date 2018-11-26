@@ -49,20 +49,28 @@ func (c *Client) SpreadFuriousLove(lbCount, tcToSpread int, lbNames, msg string)
 	return c.bonus(namesArray, coins, msg)
 }
 
-func parseUsers(rawData []byte, me string) ([]string, error) {
+func parseUsers(rawData []byte, me string, filters ...nameFilter) ([]string, error) {
 	parsed := UsersResponse{}
 	err := json.Unmarshal(rawData, &parsed)
 	if err != nil {
 		return nil, err
 	}
 
-	names := make([]string, len(parsed.Users))
-	for i, u := range parsed.Users {
+	var names []string
+
+namesLoop:
+	for _, u := range parsed.Users {
 		if u.Username == me {
 			continue
 		}
 
-		names[i] = u.Username
+		for _, f := range filters {
+			if f(u.Username) {
+				continue namesLoop
+			}
+		}
+
+		names = append(names, u.Username)
 	}
 
 	return names, nil
