@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+go install cmd/spreadlove.go
+cp bin/autocompletion /usr/local/etc/bash_completion.d/spreadlove

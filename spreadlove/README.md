@@ -23,3 +23,9 @@ where flags are as following:
 `lucky-names=<strings separated by a comma without spaces>` - if you want to give TCs to a specific group of people instead of random folks, just provide this flag.
 `coins-limit=<int>` - if you don't want to spend ALL your coins at once you can specify a limit using this one.
 `message=<string>` - if you want to add your custom message for a bonus, provide it here.
+
+You can also use `./install` to install the tool to your $GOBIN and copy autocompletion script to osx's default bash_completion.d directory.
+
+#### Autocompletion
+
+There's a script for autocompletion living under `./bin/autocompletion`, add it to your `bash_completion.d/spreadlove` and have fun spreading your coins even faster.

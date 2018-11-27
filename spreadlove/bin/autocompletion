@@ -1,0 +1,6 @@
+_spreadlove()
+{
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=( $(compgen -W "-lucky-folks= -lucky-names= -coins-limit= -message= -find-user="  -- $cur) )
+}
+complete -F _spreadlove spreadlove
