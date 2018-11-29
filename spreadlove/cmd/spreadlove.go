@@ -9,18 +9,30 @@ import (
 )
 
 var (
-	apiKey   = os.Getenv("BONUSLY_API_KEY")
-	lbCount  = flag.Int("lucky-folks", 0, "to how many random folks do you want to send some shiny coins?")
-	tcLimit  = flag.Int("coins-limit", 0, "if you don't want to spend ALL your coins at once you can specify a limit using this one.")
-	lbNames  = flag.String("lucky-names", "", "(strings separated by a comma without spaces) if you want to give TCs to a specific group of people instead of random folks, just provide this flag.")
-	msg      = flag.String("message", "", "if you want to add you custom message for a bonus, provide it here.")
-	findUser = flag.String("find-user", "", "if you're not sure about the username of one you want to send a bonus to, this option will provide you with all matching names")
+	apiKey    = os.Getenv("BONUSLY_API_KEY")
+	lbCount   = flag.Int("lucky-folks", 0, "to how many random folks do you want to send some shiny coins?")
+	tcLimit   = flag.Int("coins-limit", 0, "if you don't want to spend ALL your coins at once you can specify a limit using this one.")
+	lbNames   = flag.String("lucky-names", "", "(strings separated by a comma without spaces) if you want to give TCs to a specific group of people instead of random folks, just provide this flag.")
+	msg       = flag.String("message", "", "if you want to add you custom message for a bonus, provide it here.")
+	findUser  = flag.String("find-user", "", "if you're not sure about the username of one you want to send a bonus to, this option will provide you with all matching names")
+	myBalance = flag.Bool("my-balance", false, "prints your remaining giving balance")
 )
 
 func main() {
 	c := bonusly.New(apiKey)
 
 	flag.Parse()
+	if *myBalance {
+		balance, err := c.MyBalance()
+		if err != nil {
+			fmt.Println("ERROR: ", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("your balance is: ", balance)
+		os.Exit(0)
+	}
+
 	if *findUser != "" {
 		out, err := c.FindName(*findUser)
 		if err != nil {
@@ -65,5 +77,6 @@ This app is here to help you spend all your coins and have some fun with it, you
 	'lucky-names=<strings separated by a comma without spaces>' -> if you want to give TCs to a specific group of people instead of random folks, just provide this flag.
 	'coins-limit=<int>' -> if you don't want to spend ALL your coins at once you can specify a limit using this one.
 	'message=<string>' -> if you want to add you custom message for a bonus, provide it here.
-	'find-user=<string>' -> if you're not sure about the username of one you want to send a bonus to, this option will provide you with all matching names`)
+	'find-user=<string>' -> if you're not sure about the username of one you want to send a bonus to, this option will provide you with all matching names
+	'my-balance'`)
 }
