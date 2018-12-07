@@ -14,13 +14,21 @@ var (
 )
 
 func main() {
+	err := topics.TeachAboutEntities("entities/train/data.json", "APPS")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	t := topics.New(
 		1,
-		10,
-		topics.WithStopWordsFromFile("./fixtures/stopwords-en.txt"),
+		15,
+		topics.NewCleaner(
+			topics.OnlyWithNouns,
+			topics.WithCustomModels("entities/APPS"),
+		),
 	)
 
-	topics, err := t.Process(readFile("./fixtures/gop.txt"))
+	topics, err := t.Process(readFile("./fixtures/comments-clean.txt"))
 	if err != nil {
 		log.Fatal(err)
 	}
