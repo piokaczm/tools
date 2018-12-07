@@ -14,10 +14,10 @@ var (
 )
 
 func main() {
-	err := topics.TeachAboutEntities("entities/train/data.json", "APPS")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err := topics.TeachAboutEntities("entities/train/data.json", "APPS")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	t := topics.New(
 		1,
@@ -28,7 +28,7 @@ func main() {
 		),
 	)
 
-	topics, err := t.Process(readFile("./fixtures/comments-clean.txt"))
+	topics, err := t.Process(readFile("./fixtures/slack.txt"))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,7 +1,6 @@
 package topics
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -108,15 +107,12 @@ func (c *Cleaner) cleanupSingleString(s string) (string, error) {
 				continue
 			}
 		} else {
+			// maybe just add a whitelist for a good start, to make it simpler?
 			if !strings.HasPrefix(tok.Tag, c.only) && tok.Label != "APPLICATION" && tok.Label != "B-GPE" { // todo: make it dynamic
 				continue
 			}
 		}
 		cleanStrings = append(cleanStrings, tok.Text)
-	}
-
-	for _, ent := range doc.Entities() {
-		fmt.Println(ent.Text, ent.Label)
 	}
 
 	// not the exact representation, but should be close enough for later processing
