@@ -3,6 +3,7 @@ package slack
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	sapi "github.com/nlopes/slack"
 )
@@ -13,6 +14,17 @@ type Client struct {
 	sapiClient *sapi.Client
 }
 
+type ChannelPooler struct {
+	*Client
+	extractor TopicExtractor
+	channel   string
+	lastCheck time.Time
+}
+
+type TopicExtractor interface {
+	Process([]string) ([][]string, error)
+}
+
 func New(token string) (*Client, error) {
 	if token == "" {
 		return nil, ErrNoToken
@@ -21,13 +33,49 @@ func New(token string) (*Client, error) {
 	return &Client{sapi.New(token)}, nil
 }
 
-func (c *Client) GetChannelHistory(name string) ([]string, error) {
-	id, err := c.getChannelID(name)
+func (c *Client) NewChannelPooler(channelName string, topicExtractor TopicExtractor) (*ChannelPooler, error) {
+	if topicExtractor == nil {
+		return nil, errors.New("no topic extractor")
+	}
+
+	if channelName == "" {
+		return nil, errors.New("no channel name")
+	}
+
+	return &ChannelPooler{
+		Client:    c,
+		extractor: topicExtractor,
+		channel:   channelName,
+		lastCheck: time.Now(), // ???
+	}, nil
+}
+
+func (c *ChannelPooler) Name() string {
+	return fmt.Sprintf("slack channel %q", c.channel)
+}
+
+func (c *ChannelPooler) Topics() ([][]string, error) {
+	msgs, err := c.getChannelHistory()
 	if err != nil {
 		return nil, err
 	}
 
-	params := sapi.HistoryParameters{Unreads: false, Count: 100}
+	topics, err := c.extractor.Process(msgs)
+	if err != nil {
+		return nil, err
+	}
+
+	c.lastCheck = time.Now()
+	return topics, nil
+}
+
+func (c *ChannelPooler) getChannelHistory() ([]string, error) {
+	id, err := c.getChannelID(c.channel)
+	if err != nil {
+		return nil, err
+	}
+
+	params := sapi.HistoryParameters{Unreads: false, Count: 100} // todo: fetch data since the last check
 	h, err := c.sapiClient.GetChannelHistory(id, params)
 	if err != nil {
 		return nil, err
@@ -41,7 +89,7 @@ func (c *Client) GetChannelHistory(name string) ([]string, error) {
 	return msgs, nil
 }
 
-func (c *Client) getChannelID(name string) (string, error) {
+func (c *ChannelPooler) getChannelID(name string) (string, error) {
 	chans, err := c.sapiClient.GetChannels(false)
 	if err != nil {
 		return "", nil

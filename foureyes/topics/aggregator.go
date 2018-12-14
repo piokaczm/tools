@@ -1,7 +1,6 @@
 package topics
 
 import (
-	"fmt"
 	"sort"
 
 	"gonum.org/v1/gonum/mat"
@@ -55,7 +54,7 @@ func (a *aggregator) getTopWords(n int) [][]string {
 			if topWords[i] == nil {
 				topWords[i] = make([]string, 0)
 			}
-			fmt.Printf("words: %v, score: %9.9f\n", m[score], score)
+			// fmt.Printf("words: %v, score: %9.9f\n", m[score], score)
 
 			// TODO: update j if m[score] is more than one word
 			topWords[i] = append(topWords[i], m[score]...) // there might be multiple words with the same score
