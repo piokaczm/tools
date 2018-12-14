@@ -8,8 +8,14 @@ type Watcher struct {
 	notifier       Notifier       // entity for sending alerts
 }
 
+type Comparator interface {
+	Match([][]string) (string, error)
+}
+
 type Source interface {
-	FetchNewData() ([]string, error)
+	Name() string
+	FetchNewData() ([][]string, error)
+	Interval() time.Duration
 }
 
 type TopicExtractor interface {
@@ -18,8 +24,4 @@ type TopicExtractor interface {
 
 type Notifier interface {
 	Notify(string) error
-}
-
-func (w *Watcher) Schedule(interval time.Duration) error {
-	return nil
 }
