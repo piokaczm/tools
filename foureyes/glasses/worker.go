@@ -7,20 +7,21 @@ import (
 )
 
 var (
-	ErrNoSource    = errors.New("glasses: no source provided for worker")
-	ErrNoNotifier  = errors.New("glasses: no notifier provided for worker")
-	ErrNoExtractor = errors.New("glasses: no topic extractor provided for worker")
+	ErrNoSource     = errors.New("glasses: no source provided")
+	ErrNoNotifier   = errors.New("glasses: no notifier provided")
+	ErrNoComparator = errors.New("glasses: no comparator provided")
+	ErrBadInterval  = errors.New("glasses: bad interval provided")
 )
 
 type worker struct {
 	source     Source
 	notifier   Notifier
-	extractor  TopicExtractor
 	comparator Comparator
+	interval   time.Duration
 	stop       chan struct{}
 }
 
-func newWorker(s Source, n Notifier, e TopicExtractor, c Comparator) (*worker, error) {
+func newWorker(s Source, n Notifier, c Comparator, i time.Duration) (*worker, error) {
 	if s == nil {
 		return nil, ErrNoSource
 	}
@@ -29,15 +30,19 @@ func newWorker(s Source, n Notifier, e TopicExtractor, c Comparator) (*worker, e
 		return nil, ErrNoNotifier
 	}
 
-	if e == nil {
-		return nil, ErrNoExtractor
+	if c == nil {
+		return nil, ErrNoComparator
 	}
 
-	return &worker{s, n, e, c, make(chan struct{}, 1)}, nil
+	if i.Nanoseconds() < 0 {
+		return nil, ErrBadInterval
+	}
+
+	return &worker{s, n, c, i, make(chan struct{}, 1)}, nil
 }
 
 func (w *worker) start() {
-	t := time.NewTicker(w.source.Interval())
+	t := time.NewTicker(w.interval)
 
 	for {
 		select {
@@ -60,23 +65,9 @@ func (w *worker) exit() {
 }
 
 func (w *worker) process() error {
-	newData, err := w.source.FetchNewData()
+	msg, err := w.comparator.Match(w.source)
 	if err != nil {
 		return err
-	}
-
-	topics, err := w.extractor.Process(newData)
-	if err != nil {
-		return err
-	}
-
-	msg, err := w.comparator.Match(topics)
-	if err != nil {
-		return err
-	}
-
-	if msg == "" {
-		return nil
 	}
 
 	return w.notifier.Notify(msg)

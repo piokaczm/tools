@@ -1,27 +1,54 @@
 package glasses
 
-import "time"
+import (
+	"time"
 
-type Watcher struct {
-	sources        []Source       // APIs we ping for new data
-	topicExtractor TopicExtractor // entity for extracting topics from new data
-	notifier       Notifier       // entity for sending alerts
-}
+	"github.com/piokaczm/tools/foureyes/comparator"
+)
 
 type Comparator interface {
-	Match([][]string) (string, error)
+	Match(comparator.Source) (string, error)
 }
 
 type Source interface {
-	Name() string
-	FetchNewData() ([][]string, error)
-	Interval() time.Duration
-}
-
-type TopicExtractor interface {
-	Process([][]string) ([][]string, error)
+	comparator.Source
 }
 
 type Notifier interface {
 	Notify(string) error
+}
+
+type Watcher struct {
+	workers  []*worker
+	notifier Notifier // entity for sending alerts
+}
+
+func New(n Notifier) (*Watcher, error) {
+	if n == nil {
+		return nil, ErrNoNotifier
+	}
+
+	return &Watcher{make([]*worker, 0), n}, nil
+}
+
+func (w *Watcher) Register(s Source, c Comparator, i time.Duration) error {
+	worker, err := newWorker(s, w.notifier, c, i)
+	if err != nil {
+		return err
+	}
+
+	w.workers = append(w.workers, worker)
+	return nil
+}
+
+func (w *Watcher) Start() {
+	for _, w := range w.workers {
+		go w.start()
+	}
+}
+
+func (w *Watcher) Stop() {
+	for _, w := range w.workers {
+		w.exit()
+	}
 }
