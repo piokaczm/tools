@@ -1,5 +1,4 @@
 fixtures/comments.txt
 fixtures/comments-clean.txt
 fixtures/slack.txt
-cmd/test
 .env*
