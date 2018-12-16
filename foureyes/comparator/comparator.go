@@ -1,9 +1,12 @@
 package comparator
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
+
+var ErrNoMatches = errors.New("comparator: no matches") // TODO: rethink no match handling, err is weird, empty string is weird...
 
 type Matcher struct {
 	topics []string
@@ -11,7 +14,7 @@ type Matcher struct {
 
 type Source interface {
 	Name() string
-	Topics() [][]string
+	Topics() ([][]string, error)
 }
 
 func New(topics []string) *Matcher {
@@ -19,9 +22,14 @@ func New(topics []string) *Matcher {
 }
 
 func (m *Matcher) Match(source Source) (string, error) {
-	intersection, exists := m.findMatches(source.Topics())
+	sourceTopics, err := source.Topics()
+	if err != nil {
+		return "", err
+	}
+
+	intersection, exists := m.findMatches(sourceTopics)
 	if !exists {
-		return "", fmt.Errorf("no matches") // probably better to just return bool, easier for consumers to check...
+		return "", ErrNoMatches
 	}
 
 	return m.buildMsg(intersection, source.Name()), nil
@@ -37,6 +45,7 @@ func (m *Matcher) buildMsg(in []string, name string) string {
 
 func (m *Matcher) findMatches(s [][]string) ([]string, bool) {
 	var matches []string
+	appended := make(map[string]struct{})
 
 	for _, list := range s {
 		for _, t := range list {
@@ -44,6 +53,11 @@ func (m *Matcher) findMatches(s [][]string) ([]string, bool) {
 				continue
 			}
 
+			if _, ok := appended[t]; ok {
+				continue
+			}
+
+			appended[t] = struct{}{}
 			matches = append(matches, t)
 		}
 	}
@@ -53,7 +67,7 @@ func (m *Matcher) findMatches(s [][]string) ([]string, bool) {
 
 func (m *Matcher) include(e string) bool {
 	for _, t := range m.topics {
-		if t == e {
+		if strings.ToLower(t) == strings.ToLower(e) {
 			return true
 		}
 	}
