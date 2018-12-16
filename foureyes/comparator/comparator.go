@@ -27,6 +27,10 @@ func (m *Matcher) Match(source Source) (string, error) {
 		return "", err
 	}
 
+	for i, topic := range sourceTopics {
+		fmt.Printf("[topics #%d] %v\n", i, topic)
+	}
+
 	intersection, exists := m.findMatches(sourceTopics)
 	if !exists {
 		return "", ErrNoMatches

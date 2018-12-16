@@ -21,6 +21,10 @@ func New(topicsNum, wordsNum int, c *Cleaner) *Extractor {
 }
 
 func (e *Extractor) Process(document []string) ([][]string, error) {
+	if len(document) == 0 {
+		return [][]string{}, nil
+	}
+
 	document, err := e.cleaner.Clean(document)
 	if err != nil {
 		return nil, err
