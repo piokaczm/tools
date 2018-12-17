@@ -1,0 +1,14 @@
+slack_username: user
+
+topics:
+  - Katowice
+  - Silesia
+  - Puppies
+
+slack:
+  api_token: token
+  channels:
+    - name: random
+      interval: 5s
+    - name: general
+      interval: 10s
