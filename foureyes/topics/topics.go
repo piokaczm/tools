@@ -39,9 +39,6 @@ func (e *Extractor) Process(document []string) ([][]string, error) {
 		return nil, errors.Wrap(err, "failed to model topics")
 	}
 
-	for i := 0; i < 100; i++ {
-		_ = lda.Components()
-	}
 	topicsOverWords := lda.Components()
 	tr, tc := topicsOverWords.Dims()
 

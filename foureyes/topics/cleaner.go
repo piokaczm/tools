@@ -2,36 +2,33 @@ package topics
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 	prose "gopkg.in/jdkato/prose.v2"
 )
 
-var (
-	verbTags      = []string{"VB", "VBD", "VBG", "VBN", "VBP", "VBZ"}
-	adverbTags    = []string{"RB", "RBR", "RBS", "RP"}
-	pronounTags   = []string{"PRP", "PRP$"}
-	adjectiveTags = []string{"JJ", "JJR", "JJS"}
-)
-
 type Cleaner struct {
-	bannedTags map[string]struct{}
-	only       string
-	models     []*prose.Model
+	pipeline []Filter
+	models   []*prose.Model // what to do with it?
 }
+
+type Filter func(input prose.Token) (output string, discard bool) // TODO: abstract prose.Token?
 
 type CleanerOption func(c *Cleaner)
 
 func NewCleaner(opts ...CleanerOption) *Cleaner {
-	c := &Cleaner{
-		bannedTags: make(map[string]struct{}),
-	}
+	c := &Cleaner{}
 
 	for _, opt := range opts {
 		opt(c)
 	}
 
 	return c
+}
+
+func (c *Cleaner) BuildPipeline(filters ...Filter) {
+	c.pipeline = append(c.pipeline, filters...)
 }
 
 func WithCustomModels(paths ...string) CleanerOption {
@@ -43,42 +40,32 @@ func WithCustomModels(paths ...string) CleanerOption {
 	}
 }
 
-func OnlyWithNouns(c *Cleaner) {
-	c.only = "NN"
-}
-
-func WithoutPronouns(c *Cleaner) {
-	c.banTag(pronounTags)
-}
-
-func WithoutAdjectives(c *Cleaner) {
-	c.banTag(adjectiveTags)
-}
-
-func WithoutAdverbs(c *Cleaner) {
-	c.banTag(adverbTags)
-}
-
-func WithoutVerbs(c *Cleaner) {
-	c.banTag(verbTags)
-}
-
-func (c *Cleaner) banTag(tagsList []string) {
-	for _, tag := range tagsList {
-		c.bannedTags[tag] = struct{}{}
-	}
-}
-
 func (c *Cleaner) Clean(docs []string) ([]string, error) {
 	cleanDocs := make([]string, len(docs))
+	wg := &sync.WaitGroup{}
+	errs := make(chan error, len(docs))
 
 	for i, doc := range docs {
-		cleanString, err := c.cleanupSingleString(doc)
+		wg.Add(1)
+
+		go func(doc string, i int, wg *sync.WaitGroup) {
+			defer wg.Done()
+			cleanString, err := c.cleanupSingleString(doc)
+			if err != nil {
+				errs <- err
+				return
+			}
+
+			cleanDocs[i] = cleanString
+		}(doc, i, wg)
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
 		if err != nil {
 			return nil, err
 		}
-
-		cleanDocs[i] = cleanString
 	}
 
 	return cleanDocs, nil
@@ -101,17 +88,20 @@ func (c *Cleaner) cleanupSingleString(s string) (string, error) {
 
 	var cleanStrings []string
 
+TokenLoop:
 	for _, tok := range doc.Tokens() {
-		if c.only == "" {
-			if _, exists := c.bannedTags[tok.Tag]; exists {
-				continue
-			}
-		} else {
-			// maybe just add a whitelist for a good start, to make it simpler?
-			if !strings.HasPrefix(tok.Tag, c.only) && tok.Label != "APPLICATION" && tok.Label != "B-GPE" { // todo: make it dynamic
-				continue
+		// 	// maybe just add a whitelist for a good start, to make it simpler?
+		// 	if !strings.HasPrefix(tok.Tag, c.only) && tok.Label != "APPLICATION" && tok.Label != "B-GPE" { // todo: make it dynamic
+		// 		continue
+		// 	}
+		var discard bool
+		for _, filter := range c.pipeline {
+			tok.Text, discard = filter(tok)
+			if discard {
+				continue TokenLoop
 			}
 		}
+
 		cleanStrings = append(cleanStrings, tok.Text)
 	}
 

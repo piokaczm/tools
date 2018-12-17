@@ -26,41 +26,63 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
+	log.Println("creating slack API")
 	s, err := slack.New(os.Getenv("SLACK_TOKEN"))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	n, err := s.NewNotifier("piokaczm")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// n, err := s.NewNotifier("piokaczm")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
+	log.Println("creating cleaner")
+	cleaner := topics.NewCleaner()
+	cleaner.BuildPipeline(
+		topics.OnlyWithNouns,
+		topics.NotShorterThan(3),
+		topics.WithStemming,
+		topics.WithLemmatizing,
+	)
 	t := topics.New(
-		2,
+		5,
 		15,
-		topics.NewCleaner(
-			topics.OnlyWithNouns,
-		),
+		cleaner,
 	)
 
+	log.Println("creating #random pooler")
 	pooler, err := s.NewChannelPooler("random", t)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	c := comparator.New([]string{"Silesia", "Katowice", "Warsaw", "York"})
-	w, err := glasses.New(n)
+	log.Println("cleaning topics to watch for")
+	// TODO: create map for proper human readable topics within notifications?
+	topicsToWatchFor, err := cleaner.Clean([]string{"Silesia", "Katowice", "Warsaw", "York"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("parsed topics: ", topicsToWatchFor)
+
+	log.Println("creating comparator")
+	c := comparator.New(topicsToWatchFor)
+
+	log.Println("creating glasses watcher")
+	w, err := glasses.New(notifier{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = w.Register(pooler, c, 40*time.Second)
+	log.Println("registering pooler")
+	err = w.Register(pooler, c, 3*time.Second)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	log.Println("starting workers")
 	w.Start()
+	log.Println("program is running!")
 	<-stop
 	w.Stop()
 }
