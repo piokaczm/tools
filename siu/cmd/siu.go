@@ -13,7 +13,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	t := docker.New(os.Args[1], os.Args[2])
+	t, err := docker.New(os.Args[1], os.Args[2])
+	if err != nil {
+		fmt.Printf("error: %s\n", err)
+		os.Exit(1)
+	}
+
 	v, err := t.Translate()
 	if err != nil {
 		fmt.Printf("error: %s\n", err)

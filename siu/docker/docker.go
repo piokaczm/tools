@@ -10,22 +10,35 @@ import (
 	"strings"
 )
 
-var translations = map[string]string{
-	"sh":   "docker exec -ti %s /bin/sh",
-	"bash": "docker exec -ti %s /bin/bash",
-	"lg":   "docker logs -f %s",
-}
+var (
+	ErrEmptyCommand       = errors.New("docker: provided command to translate is empty")
+	ErrEmptyContainerName = errors.New("docker: provided container name is empty")
+
+	translations = map[string]string{
+		"sh":   "docker exec -ti %s /bin/sh",
+		"bash": "docker exec -ti %s /bin/bash",
+		"lg":   "docker logs -f %s",
+	}
+)
 
 type Translator struct {
 	command   string
 	container string
 }
 
-func New(command, container string) *Translator {
+func New(command, container string) (*Translator, error) {
+	if command == "" {
+		return nil, ErrEmptyCommand
+	}
+
+	if container == "" {
+		return nil, ErrEmptyContainerName
+	}
+
 	return &Translator{
 		command,
 		container,
-	}
+	}, nil
 }
 
 func (t *Translator) Translate() (string, error) {
