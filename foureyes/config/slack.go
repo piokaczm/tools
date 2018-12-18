@@ -1,31 +1,62 @@
 package config
 
 import (
-	"github.com/davecgh/go-spew/spew"
+	"errors"
+	"strconv"
+	"strings"
+	"time"
+
 	"gopkg.in/yaml.v2"
 )
 
+var (
+	ErrMalformedInterval = errors.New("config: interval is malformed, use format <number><unit> (eg. 10s)")
+
+	timeDict = map[string]time.Duration{
+		"s": time.Second,
+		"m": time.Minute,
+		"h": time.Hour,
+	}
+)
+
 type Slack struct {
-	s struct {
-		apiToken string         `yaml:"api_token"`
-		channels []slackChannel `yaml:"channels"`
-	} `yaml:"slack"`
+	Config SlackConfig `yaml:"slack"`
 }
 
-type slackChannel struct {
-	name     string `yaml:"name"`
-	interval string `yaml:"interval"`
+type SlackConfig struct {
+	ApiToken string         `yaml:"api_token"`
+	Channels []SlackChannel `yaml:"channels"`
 }
 
-func SlackParser(data []byte) ([]Service, error) {
-	var channels []Service
+type SlackChannel struct {
+	Name           string `yaml:"name"`
+	IntervalString string `yaml:"interval"`
+	IntervalTime   time.Duration
+}
 
-	var s interface{}
+func slackParser(data []byte) ([]SlackChannel, error) {
+	var s Slack
 	err := yaml.Unmarshal(data, &s)
 	if err != nil {
 		return nil, err
 	}
 
-	spew.Dump(s)
-	return channels, nil
+	return s.Config.Channels, nil
+}
+
+func parseInterval(s *SlackChannel) error {
+	for sign, unit := range timeDict {
+		if strings.HasSuffix(s.IntervalString, sign) {
+			stringWithoutUnit := s.IntervalString[0 : len(s.IntervalString)-1]
+			val, err := strconv.Atoi(stringWithoutUnit)
+			if err != nil {
+				return err // TODO: wrap it
+			}
+
+			s.IntervalTime = time.Duration(val) * unit
+			return nil
+		}
+	}
+
+	return ErrMalformedInterval
 }

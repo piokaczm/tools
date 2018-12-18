@@ -3,12 +3,13 @@ package config
 import (
 	"io/ioutil"
 	"time"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Topics   []string
-	Services []Service
-	Parsers  []Parser
+	Topics        []string
+	SlackChannels []SlackChannel
 }
 
 type Service interface {
@@ -23,11 +24,10 @@ type ServiceSource interface {
 
 type Parser func([]byte) ([]Service, error)
 
-func New(parsers ...Parser) *Config {
+func New() *Config {
 	return &Config{
 		make([]string, 0),
-		make([]Service, 0),
-		parsers,
+		make([]SlackChannel, 0),
 	}
 }
 
@@ -37,14 +37,31 @@ func (c *Config) ReadConfig(path string) error {
 		return err
 	}
 
-	for _, parse := range c.Parsers {
-		services, err := parse(data)
-		if err != nil {
-			return err
-		}
+	slackChannels, err := slackParser(data)
+	if err != nil {
+		return err
+	}
+	c.SlackChannels = slackChannels
 
-		c.Services = append(c.Services, services...)
+	topics, err := topicsParser(data)
+	if err != nil {
+		return err
 	}
 
+	c.Topics = topics
+
 	return nil
+}
+
+func topicsParser(data []byte) ([]string, error) {
+	ts := struct {
+		Topics []string `yaml:"topics"`
+	}{}
+
+	err := yaml.Unmarshal(data, &ts)
+	if err != nil {
+		return nil, err
+	}
+
+	return ts.Topics, nil
 }
