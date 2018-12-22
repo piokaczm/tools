@@ -24,8 +24,8 @@ type Slack struct {
 }
 
 type SlackConfig struct {
-	ApiToken string         `yaml:"api_token"`
-	Channels []SlackChannel `yaml:"channels"`
+	ApiToken string          `yaml:"api_token"`
+	Channels []*SlackChannel `yaml:"channels"`
 }
 
 type SlackChannel struct {
@@ -34,14 +34,18 @@ type SlackChannel struct {
 	IntervalTime   time.Duration
 }
 
-func slackParser(data []byte) ([]SlackChannel, error) {
-	var s Slack
+func slackParser(data []byte) (*Slack, error) {
+	s := &Slack{}
 	err := yaml.Unmarshal(data, &s)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.Config.Channels, nil
+	for _, ch := range s.Config.Channels {
+		parseInterval(ch)
+	}
+
+	return s, nil
 }
 
 func parseInterval(s *SlackChannel) error {

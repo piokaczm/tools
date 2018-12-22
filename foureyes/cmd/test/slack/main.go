@@ -5,7 +5,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"time"
+
+	"github.com/piokaczm/tools/foureyes/config"
 
 	"github.com/piokaczm/tools/foureyes/comparator"
 	"github.com/piokaczm/tools/foureyes/glasses"
@@ -26,16 +27,22 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	log.Println("creating slack API")
-	s, err := slack.New(os.Getenv("SLACK_TOKEN"))
+	conf := config.New()
+	err := conf.ReadConfig("config.yaml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// n, err := s.NewNotifier("piokaczm")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	log.Println("creating slack API")
+	s, err := slack.New(conf.SlackConfig.ApiToken)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	n, err := s.NewNotifier(conf.SlackUsername)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	log.Println("creating cleaner")
 	cleaner := topics.NewCleaner()
@@ -45,21 +52,17 @@ func main() {
 		topics.WithStemming,
 		topics.WithLemmatizing,
 	)
+
+	// TODO: make initialization dynamic basing on input characteristics
 	t := topics.New(
 		5,
 		15,
 		cleaner,
 	)
 
-	log.Println("creating #random pooler")
-	pooler, err := s.NewChannelPooler("random", t)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	log.Println("cleaning topics to watch for")
 	// TODO: create map for proper human readable topics within notifications?
-	topicsToWatchFor, err := cleaner.Clean([]string{"Silesia", "Katowice", "Warsaw", "York"})
+	topicsToWatchFor, err := cleaner.Clean(conf.Topics)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,15 +72,23 @@ func main() {
 	c := comparator.New(topicsToWatchFor)
 
 	log.Println("creating glasses watcher")
-	w, err := glasses.New(notifier{})
+	w, err := glasses.New(n)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println("registering pooler")
-	err = w.Register(pooler, c, 3*time.Second)
-	if err != nil {
-		log.Fatal(err)
+	for _, ch := range conf.SlackConfig.Channels {
+		log.Printf("creating pooler for %s\n", ch.Name)
+		pooler, err := s.NewChannelPooler(ch.Name, t)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println("registering pooler")
+		err = w.Register(pooler, c, ch.IntervalTime)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	log.Println("starting workers")
