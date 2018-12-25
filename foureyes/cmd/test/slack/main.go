@@ -49,16 +49,11 @@ func main() {
 	cleaner.BuildPipeline(
 		topics.OnlyWithNouns,
 		topics.NotShorterThan(3),
-		topics.WithStemming,
-		topics.WithLemmatizing,
+		// topics.WithStemming,
+		// topics.WithLemmatizing,
 	)
 
-	// TODO: make initialization dynamic basing on input characteristics
-	t := topics.New(
-		5,
-		15,
-		cleaner,
-	)
+	t := topics.New(cleaner)
 
 	log.Println("cleaning topics to watch for")
 	// TODO: create map for proper human readable topics within notifications?

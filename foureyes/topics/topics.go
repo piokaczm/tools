@@ -1,22 +1,21 @@
 package topics
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 
 	"github.com/james-bowman/nlp"
 )
 
 type Extractor struct {
-	topicsNum int
-	wordsNum  int
-	cleaner   *Cleaner
+	cleaner *Cleaner
 }
 
-func New(topicsNum, wordsNum int, c *Cleaner) *Extractor {
+func New(c *Cleaner) *Extractor {
 	return &Extractor{
-		topicsNum: topicsNum,
-		wordsNum:  wordsNum,
-		cleaner:   c,
+		cleaner: c,
 	}
 }
 
@@ -30,8 +29,10 @@ func (e *Extractor) Process(document []string) ([][]string, error) {
 		return nil, err
 	}
 
+	wordsNum, topicsNum := e.determineTopicsAndWordsNum(document)
+
 	vectoriser := nlp.NewCountVectoriser()
-	lda := nlp.NewLatentDirichletAllocation(e.topicsNum)
+	lda := nlp.NewLatentDirichletAllocation(topicsNum)
 	pipeline := nlp.NewPipeline(vectoriser, lda)
 
 	_, err = pipeline.FitTransform(document...)
@@ -49,5 +50,28 @@ func (e *Extractor) Process(document []string) ([][]string, error) {
 
 	aggr := newAggregator(tr)
 	aggr.buildScoresMap(tc, topicsOverWords, vocab)
-	return aggr.getTopWords(e.wordsNum), nil
+	return aggr.getTopWords(wordsNum), nil
+}
+
+func (e *Extractor) determineTopicsAndWordsNum(document []string) (wordsNum int, topicsNum int) {
+	var words int
+
+	for _, d := range document {
+		words += len(strings.Split(d, " ")) // naive
+	}
+
+	wordsNum = int(float64(words) * 0.008)
+	topicsNum = int(float64(words) * 0.002)
+
+	fmt.Printf("words: %d | wNum: %d | tNum: %d\n", words, wordsNum, topicsNum)
+
+	if topicsNum == 0 {
+		topicsNum = 1
+	}
+
+	if wordsNum < 10 {
+		wordsNum = 10
+	}
+
+	return
 }

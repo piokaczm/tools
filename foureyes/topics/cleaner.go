@@ -44,11 +44,15 @@ func (c *Cleaner) Clean(docs []string) ([]string, error) {
 	cleanDocs := make([]string, len(docs))
 	wg := &sync.WaitGroup{}
 	errs := make(chan error, len(docs))
+	const maxGoroutines = 6
+	guard := make(chan struct{}, maxGoroutines)
 
 	for i, doc := range docs {
 		wg.Add(1)
+		guard <- struct{}{}
 
 		go func(doc string, i int, wg *sync.WaitGroup) {
+			defer func() { <-guard }()
 			defer wg.Done()
 			cleanString, err := c.cleanupSingleString(doc)
 			if err != nil {
@@ -90,10 +94,6 @@ func (c *Cleaner) cleanupSingleString(s string) (string, error) {
 
 TokenLoop:
 	for _, tok := range doc.Tokens() {
-		// 	// maybe just add a whitelist for a good start, to make it simpler?
-		// 	if !strings.HasPrefix(tok.Tag, c.only) && tok.Label != "APPLICATION" && tok.Label != "B-GPE" { // todo: make it dynamic
-		// 		continue
-		// 	}
 		var discard bool
 		for _, filter := range c.pipeline {
 			tok.Text, discard = filter(tok)
