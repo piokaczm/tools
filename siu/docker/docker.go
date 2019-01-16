@@ -14,12 +14,19 @@ var (
 	ErrEmptyCommand       = errors.New("docker: provided command to translate is empty")
 	ErrEmptyContainerName = errors.New("docker: provided container name is empty")
 
-	translations = map[string]string{
-		"sh":   "docker exec -ti %s /bin/sh",
-		"bash": "docker exec -ti %s /bin/bash",
-		"lg":   "docker logs -f %s",
+	translations = map[string]dockerCommand{
+		"sh":      dockerCommand{name: "docker exec -ti %s /bin/sh", allowMultipleContainers: false},
+		"bash":    dockerCommand{name: "docker exec -ti %s /bin/bash", allowMultipleContainers: false},
+		"lg":      dockerCommand{name: "docker logs -f %s", allowMultipleContainers: false},
+		"restart": dockerCommand{name: "docker restart ", allowMultipleContainers: true},
+		"stop":    dockerCommand{name: "docker stop ", allowMultipleContainers: true},
 	}
 )
+
+type dockerCommand struct {
+	name                    string
+	allowMultipleContainers bool
+}
 
 type Translator struct {
 	command   string
@@ -42,7 +49,7 @@ func New(command, container string) (*Translator, error) {
 }
 
 func (t *Translator) Translate() (string, error) {
-	id, err := findContainerID(t.container)
+	ids, err := findContainerID(t.container)
 	if err != nil {
 		return "", err
 	}
@@ -52,38 +59,57 @@ func (t *Translator) Translate() (string, error) {
 		return "", fmt.Errorf("translation for command %q not found", t.command)
 	}
 
-	return fmt.Sprintf(translation, id), nil
+	if !translation.allowMultipleContainers && len(ids) > 1 {
+		return "", fmt.Errorf("command %q is not supporting running on multiple containers", t.command)
+	}
+
+	var command string
+	if translation.allowMultipleContainers {
+		ids := strings.Join(ids, " ")
+		command = translation.name + ids
+	} else {
+		command = fmt.Sprintf(translation.name, ids[0])
+	}
+
+	return command, nil
 }
 
-func findContainerID(name string) (string, error) {
+func findContainerID(name string) ([]string, error) {
 	out, err := getDockerOutput(name)
 	if err != nil {
-		return "", nil
+		return nil, err
 	}
 
 	lines := strings.Split(out, "\n")
 	lines = lines[:len(lines)-1] // get rid of empty line
 	if len(lines) == 0 {
-		return "", fmt.Errorf("there are no running containers with name %q", name)
+		return nil, fmt.Errorf("there are no running containers with name %q", name)
 	}
 
-	chosenLine := lines[0]
+	// TODO: split it for god's sake
+	var chosenIDs []string
 	if len(lines) > 1 {
 		lineIdx, err := chooseContainerIdx(lines)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
-		if lineIdx >= len(lines) {
-			return "", errors.New("wrong input, non existing option was chosen")
+		if len(lineIdx) > len(lines) {
+			return nil, errors.New("wrong input, non existing option was chosen")
 		}
-		chosenLine = lines[lineIdx]
+
+		for _, idx := range lineIdx {
+			currentLine := lines[idx]
+			chosenIDs = append(chosenIDs, strings.Split(currentLine, " ")[0])
+		}
+	} else {
+		chosenIDs = []string{strings.Split(lines[0], " ")[0]}
 	}
 
-	return strings.Split(chosenLine, " ")[0], nil
+	return chosenIDs, nil
 }
 
-func chooseContainerIdx(options []string) (int, error) {
+func chooseContainerIdx(options []string) ([]int, error) {
 	reader := bufio.NewReader(os.Stdin)
 
 	prompt := fmt.Sprint("There are several containers matching provided name, which one do you want to use?\n")
@@ -95,10 +121,25 @@ func chooseContainerIdx(options []string) (int, error) {
 	fmt.Print(prompt)
 	input, err := reader.ReadString('\n')
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
-	return strconv.Atoi(strings.Replace(input, "\n", "", -1))
+	cleanInput := strings.Replace(input, "\n", "", -1)
+	cleanInput = strings.Replace(cleanInput, ", ", " ", -1)
+	cleanInput = strings.Replace(cleanInput, ",", " ", -1)
+
+	stringIDs := strings.Split(cleanInput, " ")
+	ids := make([]int, len(stringIDs))
+	for i, token := range stringIDs {
+		val, err := strconv.Atoi(token)
+		if err != nil {
+			return nil, err
+		}
+
+		ids[i] = val
+	}
+
+	return ids, nil
 }
 
 func getDockerOutput(name string) (string, error) {
