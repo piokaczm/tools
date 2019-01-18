@@ -20,6 +20,7 @@ var (
 		"lg":      dockerCommand{name: "docker logs -f %s", allowMultipleContainers: false},
 		"restart": dockerCommand{name: "docker restart ", allowMultipleContainers: true},
 		"stop":    dockerCommand{name: "docker stop ", allowMultipleContainers: true},
+		"rspec":   dockerCommand{name: "docker exec -ti %s rspec", allowMultipleContainers: false},
 	}
 )
 
