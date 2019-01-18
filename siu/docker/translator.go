@@ -22,8 +22,8 @@ var (
 
 	translations = map[string]dockerCommand{
 		"lg":      dockerCommand{name: "docker logs -f %s", allowMultipleContainers: false},
-		"restart": dockerCommand{name: "docker restart ", allowMultipleContainers: true},
-		"stop":    dockerCommand{name: "docker stop ", allowMultipleContainers: true},
+		"restart": dockerCommand{name: "docker restart %s", allowMultipleContainers: true},
+		"stop":    dockerCommand{name: "docker stop %s", allowMultipleContainers: true},
 		"exec":    dockerCommand{name: "docker exec -ti %s", allowMultipleContainers: false},
 		"sh":      dockerCommand{name: "docker exec -ti %s /bin/sh", allowMultipleContainers: false},
 		"bash":    dockerCommand{name: "docker exec -ti %s /bin/bash", allowMultipleContainers: false},
@@ -93,14 +93,16 @@ func (t *Translator) Translate() (string, error) {
 }
 
 func (t *Translator) buildFinalCommand(d dockerCommand, commandArgs, containersIDs []string) string {
+	var ids string
 	if d.allowMultipleContainers {
-		ids := strings.Join(containersIDs, " ")
-		return d.name + ids
+		ids = strings.Join(containersIDs, " ")
+	} else {
+		ids = containersIDs[0]
 	}
 
 	translationSlice := append([]string{d.name}, commandArgs...)
 	translationWithArgs := strings.Join(translationSlice, " ")
-	return fmt.Sprintf(translationWithArgs, containersIDs[0])
+	return fmt.Sprintf(translationWithArgs, ids)
 }
 
 func (t *Translator) splitArguments(d dockerCommand) (containerNames []string, commandArgs []string) {
