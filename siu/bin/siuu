@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-siu_out=$(siu "$1" "$2" | tee /dev/stderr)
+siu_out=$(siu "$@" | tee /dev/stderr)
 command=$(echo $siu_out | grep -oe "docker .*")
 eval $command
