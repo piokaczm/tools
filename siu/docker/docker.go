@@ -12,7 +12,7 @@ import (
 
 var (
 	ErrEmptyCommand       = errors.New("docker: provided command to translate is empty")
-	ErrEmptyContainerName = errors.New("docker: provided container name is empty")
+	ErrEmptyContainerName = errors.New("docker: no containers names provided")
 
 	translations = map[string]dockerCommand{
 		"sh":      dockerCommand{name: "docker exec -ti %s /bin/sh", allowMultipleContainers: false},
@@ -29,27 +29,28 @@ type dockerCommand struct {
 }
 
 type Translator struct {
-	command   string
-	container string
+	command    string
+	container  string
+	containers []string
 }
 
-func New(command, container string) (*Translator, error) {
+func New(command string, containers []string) (*Translator, error) {
 	if command == "" {
 		return nil, ErrEmptyCommand
 	}
 
-	if container == "" {
+	if len(containers) == 0 {
 		return nil, ErrEmptyContainerName
 	}
 
 	return &Translator{
-		command,
-		container,
+		command:    command,
+		containers: containers,
 	}, nil
 }
 
 func (t *Translator) Translate() (string, error) {
-	ids, err := findContainerID(t.container)
+	ids, err := findContainersIDs(t.containers)
 	if err != nil {
 		return "", err
 	}
@@ -74,8 +75,8 @@ func (t *Translator) Translate() (string, error) {
 	return command, nil
 }
 
-func findContainerID(name string) ([]string, error) {
-	out, err := getDockerOutput(name)
+func findContainersIDs(names []string) ([]string, error) {
+	out, err := getDockerOutput(names)
 	if err != nil {
 		return nil, err
 	}
@@ -83,30 +84,34 @@ func findContainerID(name string) ([]string, error) {
 	lines := strings.Split(out, "\n")
 	lines = lines[:len(lines)-1] // get rid of empty line
 	if len(lines) == 0 {
-		return nil, fmt.Errorf("there are no running containers with name %q", name)
+		return nil, fmt.Errorf("there are no running containers with name matching any of %q", names)
 	}
 
-	// TODO: split it for god's sake
-	var chosenIDs []string
-	if len(lines) > 1 {
-		lineIdx, err := chooseContainerIdx(lines)
+	return extractContinersIDsFromLines(lines)
+}
+
+func extractContinersIDsFromLines(rawOutputLines []string) ([]string, error) {
+	if len(rawOutputLines) > 1 {
+		var chosenIDs []string
+
+		lineIdx, err := chooseContainerIdx(rawOutputLines)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(lineIdx) > len(lines) {
+		if len(lineIdx) > len(rawOutputLines) {
 			return nil, errors.New("wrong input, non existing option was chosen")
 		}
 
 		for _, idx := range lineIdx {
-			currentLine := lines[idx]
+			currentLine := rawOutputLines[idx]
 			chosenIDs = append(chosenIDs, strings.Split(currentLine, " ")[0])
 		}
-	} else {
-		chosenIDs = []string{strings.Split(lines[0], " ")[0]}
+
+		return chosenIDs, nil
 	}
 
-	return chosenIDs, nil
+	return []string{strings.Split(rawOutputLines[0], " ")[0]}, nil
 }
 
 func chooseContainerIdx(options []string) ([]int, error) {
@@ -142,9 +147,9 @@ func chooseContainerIdx(options []string) ([]int, error) {
 	return ids, nil
 }
 
-func getDockerOutput(name string) (string, error) {
+func getDockerOutput(names []string) (string, error) {
 	ps := exec.Command("docker", "ps", "--format", `{{.ID}} {{.Names}}`)
-	grep := exec.Command("grep", name)
+	grep := exec.Command("grep", strings.Join(names, "\\|"))
 
 	pipe, err := ps.StdoutPipe()
 	if err != nil {
