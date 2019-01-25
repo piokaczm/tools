@@ -119,63 +119,7 @@ func TestTranslate(t *testing.T) {
 			userInput:      "0 2\n",
 			expectedOutput: "docker stop f4321fb02880 f4321fb02882",
 		},
-		// specific commands translations
-		{
-			name:           "with lg command",
-			command:        "lg",
-			dockerOutput:   []string{"f4321fb02881 my_mom"},
-			args:           []string{"my_mom"},
-			expectedOutput: "docker logs -f f4321fb02881",
-		},
-		{
-			name:           "with stop command",
-			command:        "stop",
-			dockerOutput:   []string{"f4321fb02881 my_mom"},
-			args:           []string{"my_mom"},
-			expectedOutput: "docker stop f4321fb02881",
-		},
-		{
-			name:           "with exec command",
-			command:        "exec",
-			dockerOutput:   []string{"f4321fb02881 my_mom"},
-			args:           []string{"my_mom", "ls"},
-			expectedOutput: "docker exec -ti f4321fb02881 ls",
-		},
-		{
-			name:           "with restart command",
-			command:        "restart",
-			dockerOutput:   []string{"f4321fb02881 my_mom"},
-			args:           []string{"my_mom"},
-			expectedOutput: "docker restart f4321fb02881",
-		},
-		{
-			name:           "with sh command",
-			command:        "sh",
-			dockerOutput:   []string{"f4321fb02881 my_mom"},
-			args:           []string{"my_mom"},
-			expectedOutput: "docker exec -ti f4321fb02881 /bin/sh",
-		},
-		{
-			name:           "with bash command",
-			command:        "bash",
-			dockerOutput:   []string{"f4321fb02881 my_mom"},
-			args:           []string{"my_mom"},
-			expectedOutput: "docker exec -ti f4321fb02881 /bin/bash",
-		},
-		{
-			name:           "with rspec command",
-			command:        "rspec",
-			dockerOutput:   []string{"f4321fb02881 my_mom"},
-			args:           []string{"my_mom"},
-			expectedOutput: "docker exec -ti f4321fb02881 rspec",
-		},
 		// errors tests
-		{
-			name:        "with not existing command",
-			command:     "dumb",
-			args:        []string{"my_mom"},
-			expectedErr: "translation for command \"dumb\" not found",
-		},
 		{
 			name:         "with no matching containers",
 			command:      "restart",
@@ -195,7 +139,7 @@ func TestTranslate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			translator, err := New(testCase.command, testCase.args)
+			translator, err := New(testCase.args)
 			if err != nil {
 				t.Errorf("expected no errors, got %s", err)
 			}
@@ -209,7 +153,7 @@ func TestTranslate(t *testing.T) {
 			defer os.Remove(tempFile.Name())
 			translator.inputSource = tempFile
 
-			output, err := translator.Translate()
+			output, err := translator.Translate(testCase.command)
 			if testCase.expectedErr != "" {
 				assert.EqualError(t, err, testCase.expectedErr)
 				return

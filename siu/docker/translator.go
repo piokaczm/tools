@@ -19,16 +19,6 @@ var (
 	ErrEmptyArgs = errors.New("docker: no containers names/command arguments provided")
 	// ErrWrongUserInput is returned when a user provided a response to the interactive prompt which is not valid.
 	ErrWrongUserInput = errors.New("wrong input, non existing option was chosen")
-
-	translations = map[string]dockerCommand{
-		"lg":      dockerCommand{name: "docker logs -f %s", allowMultipleContainers: false},
-		"restart": dockerCommand{name: "docker restart %s", allowMultipleContainers: true},
-		"stop":    dockerCommand{name: "docker stop %s", allowMultipleContainers: true},
-		"exec":    dockerCommand{name: "docker exec -ti %s", allowMultipleContainers: false},
-		"sh":      dockerCommand{name: "docker exec -ti %s /bin/sh", allowMultipleContainers: false},
-		"bash":    dockerCommand{name: "docker exec -ti %s /bin/bash", allowMultipleContainers: false},
-		"rspec":   dockerCommand{name: "docker exec -ti %s rspec", allowMultipleContainers: false},
-	}
 )
 
 // Lister is an interface describing an entity that can list docker images and possibly filter them
@@ -37,14 +27,19 @@ type Lister interface {
 	List(containerNames []string) (outputLines []string, err error)
 }
 
+// Dictionary describes an entity able to translate an arbitrary command to a docker command.
+type Dictionary interface {
+	Get(word string) (translation dockerCommand, err error)
+}
+
 // Translator is a struct keeping raw arguments for processing during translation process.
 // When it comes to how it interprets command the rule of thumb is that if command can run
 // on multiple containers at once, it won't allow passing any dynamic paramaters for the command.
 // If it's allowed to run on a single instance only, all additional arguments will be passed as
 // dynamic parameters to the command.
 type Translator struct {
+	Dictionary
 	Lister
-	command           string
 	args              []string
 	inputSource       *os.File
 	outputDestination io.Writer
@@ -57,18 +52,14 @@ type dockerCommand struct {
 
 // New builds a Translator which based on passed command and arguments can invoke
 // the command on several docker instance or build a compound command for a single instance.
-func New(command string, args []string) (*Translator, error) {
-	if command == "" {
-		return nil, ErrEmptyCommand
-	}
-
+func New(args []string) (*Translator, error) {
 	if len(args) == 0 {
 		return nil, ErrEmptyArgs
 	}
 
 	return &Translator{
+		Dictionary:        NewInMemDictionary(),
 		Lister:            grepLister{},
-		command:           command,
 		args:              args,
 		inputSource:       os.Stdin,
 		outputDestination: os.Stdout,
@@ -77,10 +68,14 @@ func New(command string, args []string) (*Translator, error) {
 
 // Translate lists docker containers and greps the output according to passed params and based on that
 // builds a final docker command.
-func (t *Translator) Translate() (string, error) {
-	translation, ok := translations[t.command]
-	if !ok {
-		return "", fmt.Errorf("translation for command %q not found", t.command)
+func (t *Translator) Translate(command string) (string, error) {
+	if command == "" {
+		return "", ErrEmptyCommand
+	}
+
+	translation, err := t.Get(command)
+	if err != nil {
+		return "", err
 	}
 
 	containers, commandArgs := t.splitArguments(translation)
