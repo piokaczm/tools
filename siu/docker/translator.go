@@ -48,14 +48,15 @@ type Translator struct {
 // Command represents a user defined translation of an arbitrary command to docker command.
 // It also describes if provided translation can be executed on multiple containers at once.
 type Command struct {
-	Name                    string `yaml: "name"`
-	Translation             string `yaml: "translation"`
-	AllowMultipleContainers bool   `yaml: "multipleContainers"`
+	Name                    string `yaml:"name"`
+	Translation             string `yaml:"translation"`
+	AllowMultipleContainers bool   `yaml:"multipleContainers"`
 }
 
 // New builds a Translator which based on passed command and arguments can invoke
 // the command on several docker instance or build a compound command for a single instance.
 func New(args []string) (*Translator, error) {
+	// TODO: move args to Translate() as well
 	if len(args) == 0 {
 		return nil, ErrEmptyArgs
 	}
