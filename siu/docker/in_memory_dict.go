@@ -3,19 +3,19 @@ package docker
 import "fmt"
 
 var (
-	translations = map[string]dockerCommand{
-		"lg":      dockerCommand{name: "docker logs -f %s", allowMultipleContainers: false},
-		"restart": dockerCommand{name: "docker restart %s", allowMultipleContainers: true},
-		"stop":    dockerCommand{name: "docker stop %s", allowMultipleContainers: true},
-		"exec":    dockerCommand{name: "docker exec -ti %s", allowMultipleContainers: false},
-		"sh":      dockerCommand{name: "docker exec -ti %s /bin/sh", allowMultipleContainers: false},
-		"bash":    dockerCommand{name: "docker exec -ti %s /bin/bash", allowMultipleContainers: false},
-		"rspec":   dockerCommand{name: "docker exec -ti %s rspec", allowMultipleContainers: false},
+	translations = map[string]Command{
+		"lg":      Command{Translation: "docker logs -f %s", AllowMultipleContainers: false},
+		"restart": Command{Translation: "docker restart %s", AllowMultipleContainers: true},
+		"stop":    Command{Translation: "docker stop %s", AllowMultipleContainers: true},
+		"exec":    Command{Translation: "docker exec -ti %s", AllowMultipleContainers: false},
+		"sh":      Command{Translation: "docker exec -ti %s /bin/sh", AllowMultipleContainers: false},
+		"bash":    Command{Translation: "docker exec -ti %s /bin/bash", AllowMultipleContainers: false},
+		"rspec":   Command{Translation: "docker exec -ti %s rspec", AllowMultipleContainers: false},
 	}
 )
 
 type InMemDictionary struct {
-	translations map[string]dockerCommand
+	translations map[string]Command
 }
 
 func NewInMemDictionary() *InMemDictionary {
@@ -31,12 +31,12 @@ func (i *InMemDictionary) Add(name, dockerCmd string, forMultipleContainers bool
 		return fmt.Errorf("command %q already exists", name)
 	}
 
-	i.translations[name] = dockerCommand{name: dockerCmd, allowMultipleContainers: forMultipleContainers}
+	i.translations[name] = Command{Translation: dockerCmd, AllowMultipleContainers: forMultipleContainers}
 	return nil
 }
 
 // Get returns a translation for a provided name.
-func (i *InMemDictionary) Get(name string) (dockerCommand, error) {
+func (i *InMemDictionary) Get(name string) (Command, error) {
 	cmd, ok := i.translations[name]
 	if !ok {
 		return cmd, fmt.Errorf("command %q does not exist", name)

@@ -6,47 +6,47 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGet(t *testing.T) {
+func TestInMemoryGet(t *testing.T) {
 	testCases := []struct {
 		testName    string
 		commandName string
-		translation dockerCommand
+		translation Command
 		expectedErr string
 	}{
 		{
 			testName:    "with lg command",
 			commandName: "lg",
-			translation: dockerCommand{name: "docker logs -f %s", allowMultipleContainers: false},
+			translation: Command{Translation: "docker logs -f %s", AllowMultipleContainers: false},
 		},
 		{
 			testName:    "with stop command",
 			commandName: "stop",
-			translation: dockerCommand{name: "docker stop %s", allowMultipleContainers: true},
+			translation: Command{Translation: "docker stop %s", AllowMultipleContainers: true},
 		},
 		{
 			testName:    "with exec command",
 			commandName: "exec",
-			translation: dockerCommand{name: "docker exec -ti %s", allowMultipleContainers: false},
+			translation: Command{Translation: "docker exec -ti %s", AllowMultipleContainers: false},
 		},
 		{
 			testName:    "with restart command",
 			commandName: "restart",
-			translation: dockerCommand{name: "docker restart %s", allowMultipleContainers: true},
+			translation: Command{Translation: "docker restart %s", AllowMultipleContainers: true},
 		},
 		{
 			testName:    "with sh command",
 			commandName: "sh",
-			translation: dockerCommand{name: "docker exec -ti %s /bin/sh", allowMultipleContainers: false},
+			translation: Command{Translation: "docker exec -ti %s /bin/sh", AllowMultipleContainers: false},
 		},
 		{
 			testName:    "with bash command",
 			commandName: "bash",
-			translation: dockerCommand{name: "docker exec -ti %s /bin/bash", allowMultipleContainers: false},
+			translation: Command{Translation: "docker exec -ti %s /bin/bash", AllowMultipleContainers: false},
 		},
 		{
 			testName:    "with rspec command",
 			commandName: "rspec",
-			translation: dockerCommand{name: "docker exec -ti %s rspec", allowMultipleContainers: false},
+			translation: Command{Translation: "docker exec -ti %s rspec", AllowMultipleContainers: false},
 		},
 		{
 			testName:    "with not existing command",

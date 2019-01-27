@@ -29,7 +29,7 @@ type Lister interface {
 
 // Dictionary describes an entity able to translate an arbitrary command to a docker command.
 type Dictionary interface {
-	Get(word string) (translation dockerCommand, err error)
+	Get(word string) (translation Command, err error)
 }
 
 // Translator is a struct keeping raw arguments for processing during translation process.
@@ -45,9 +45,12 @@ type Translator struct {
 	outputDestination io.Writer
 }
 
-type dockerCommand struct {
-	name                    string
-	allowMultipleContainers bool
+// Command represents a user defined translation of an arbitrary command to docker command.
+// It also describes if provided translation can be executed on multiple containers at once.
+type Command struct {
+	Name                    string `yaml: "name"`
+	Translation             string `yaml: "translation"`
+	AllowMultipleContainers bool   `yaml: "multipleContainers"`
 }
 
 // New builds a Translator which based on passed command and arguments can invoke
@@ -87,21 +90,21 @@ func (t *Translator) Translate(command string) (string, error) {
 	return t.buildFinalCommand(translation, commandArgs, ids), nil
 }
 
-func (t *Translator) buildFinalCommand(d dockerCommand, commandArgs, containersIDs []string) string {
+func (t *Translator) buildFinalCommand(c Command, commandArgs, containersIDs []string) string {
 	var ids string
-	if d.allowMultipleContainers {
+	if c.AllowMultipleContainers {
 		ids = strings.Join(containersIDs, " ")
 	} else {
 		ids = containersIDs[0]
 	}
 
-	translationSlice := append([]string{d.name}, commandArgs...)
+	translationSlice := append([]string{c.Translation}, commandArgs...)
 	translationWithArgs := strings.Join(translationSlice, " ")
 	return fmt.Sprintf(translationWithArgs, ids)
 }
 
-func (t *Translator) splitArguments(d dockerCommand) (containerNames []string, commandArgs []string) {
-	if d.allowMultipleContainers {
+func (t *Translator) splitArguments(c Command) (containerNames []string, commandArgs []string) {
+	if c.AllowMultipleContainers {
 		containerNames = t.args
 		return
 	}
