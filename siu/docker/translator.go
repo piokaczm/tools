@@ -105,7 +105,8 @@ func (t *Translator) buildFinalCommand(c Command, commandArgs, containersIDs []s
 		ids = containersIDs[0]
 	}
 
-	translationSlice := append([]string{c.Translation}, commandArgs...)
+	translation := strings.Replace(c.Translation, "%s", "%[1]s", 5) // handle chained commands
+	translationSlice := append([]string{translation}, commandArgs...)
 	translationWithArgs := strings.Join(translationSlice, " ")
 	return fmt.Sprintf(translationWithArgs, ids)
 }

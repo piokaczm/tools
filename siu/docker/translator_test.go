@@ -119,6 +119,19 @@ func TestTranslate(t *testing.T) {
 			userInput:      "0 2\n",
 			expectedOutput: "docker stop f4321fb02880 f4321fb02882",
 		},
+		{
+			name:    "with multiple containers multiple commands",
+			command: "srm",
+			dockerOutput: []string{
+				"f4321fb02880 mommy",
+				"f4321fb02881 my_mom",
+				"f4321fb02882 your_mom",
+				"f4321fb02883 your_dad",
+			},
+			args:           []string{"mom", "dad"},
+			userInput:      "0 2\n",
+			expectedOutput: "docker stop f4321fb02880 f4321fb02882 && docker rm f4321fb02880 f4321fb02882",
+		},
 		// errors tests
 		{
 			name:         "with no matching containers",

@@ -11,6 +11,7 @@ var (
 		"sh":      Command{Translation: "docker exec -ti %s /bin/sh", AllowMultipleContainers: false},
 		"bash":    Command{Translation: "docker exec -ti %s /bin/bash", AllowMultipleContainers: false},
 		"rspec":   Command{Translation: "docker exec -ti %s rspec", AllowMultipleContainers: false},
+		"srm":     Command{Translation: "docker stop %s && docker rm %s", AllowMultipleContainers: true},
 	}
 )
 
