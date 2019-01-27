@@ -143,6 +143,7 @@ func TestTranslate(t *testing.T) {
 			if err != nil {
 				t.Errorf("expected no errors, got %s", err)
 			}
+			translator.Dictionary = NewInMemDictionary()
 			translator.outputDestination = ioutil.Discard
 			translator.Lister = getTestLister(testCase.dockerOutput, testCase.dockerErr)
 

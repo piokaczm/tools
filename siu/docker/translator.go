@@ -61,8 +61,14 @@ func New(args []string) (*Translator, error) {
 		return nil, ErrEmptyArgs
 	}
 
+	// TODO: pass config dir from cli.
+	dict, err := NewYAMLDictionary(fmt.Sprintf("%s/.siu/config.yaml", os.Getenv("HOME")))
+	if err != nil {
+		return nil, err
+	}
+
 	return &Translator{
-		Dictionary:        NewInMemDictionary(),
+		Dictionary:        dict,
 		Lister:            grepLister{},
 		args:              args,
 		inputSource:       os.Stdin,

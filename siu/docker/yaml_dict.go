@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	errorss "github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -40,7 +41,7 @@ func (y *YAMLDictionary) Get(name string) (Command, error) {
 func (y *YAMLDictionary) readConfig(path string) error {
 	rawConf, err := ioutil.ReadFile(path)
 	if err != nil {
-		return err
+		return errorss.Wrap(err, "couldn't read config file")
 	}
 
 	var commands struct {
@@ -49,7 +50,7 @@ func (y *YAMLDictionary) readConfig(path string) error {
 
 	err = yaml.Unmarshal(rawConf, &commands)
 	if err != nil {
-		return err
+		return errorss.Wrap(err, "couldn't unmarshall config file")
 	}
 
 	for _, c := range commands.Translations {
