@@ -1,0 +1,7 @@
+translations:
+  - name: "exec"
+    translation: "docker exec -ti %s"
+    multipleContainers: false
+  - name: "stop"
+    translation: "docker stop %s"
+    multipleContainers: true
