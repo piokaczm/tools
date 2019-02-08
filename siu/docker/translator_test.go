@@ -94,6 +94,32 @@ func TestTranslate(t *testing.T) {
 			expectedOutput: "docker stop f4321fb02880 f4321fb02882",
 		},
 		{
+			name:    "with user input with trailing space",
+			command: "stop",
+			dockerOutput: []string{
+				"f4321fb02880 mommy",
+				"f4321fb02881 my_mom",
+				"f4321fb02882 your_mom",
+				"f4321fb02883 your_dad",
+			},
+			args:           []string{"mom", "dad"},
+			userInput:      "0, 2 \n",
+			expectedOutput: "docker stop f4321fb02880 f4321fb02882",
+		},
+		{
+			name:    "with user input starting with a space",
+			command: "stop",
+			dockerOutput: []string{
+				"f4321fb02880 mommy",
+				"f4321fb02881 my_mom",
+				"f4321fb02882 your_mom",
+				"f4321fb02883 your_dad",
+			},
+			args:           []string{"mom", "dad"},
+			userInput:      " 0, 2\n",
+			expectedOutput: "docker stop f4321fb02880 f4321fb02882",
+		},
+		{
 			name:    "with multiple containers command and comma separated input",
 			command: "stop",
 			dockerOutput: []string{

@@ -209,5 +209,11 @@ func (t *Translator) promptForInput(options []string) (string, error) {
 	if err != nil {
 		return "", errorss.Wrap(err, "docker: couldn't print prompt to provided io.Writer")
 	}
-	return reader.ReadString('\n')
+
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return "", errorss.Wrap(err, "docker: couldn't read user input")
+	}
+
+	return strings.TrimSpace(input), nil
 }
