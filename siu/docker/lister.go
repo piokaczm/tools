@@ -24,18 +24,18 @@ func getGreppedDockerOut(containersNames []string) (string, error) {
 
 	pipe, err := ps.StdoutPipe()
 	if err != nil {
-		return "", errorss.Wrap(err, "docker: couldn't create pipe for standard Lister")
+		return "", errorss.Wrap(err, "docker: couldn't create pipe for getting container names")
 	}
 	grep.Stdin = pipe
 
 	err = ps.Start()
 	if err != nil {
-		return "", errorss.Wrap(err, "docker: couldn't start pipe for standard Lister")
+		return "", errorss.Wrap(err, "docker: couldn't start pipe for getting container names")
 	}
 
 	out, err := grep.Output()
-	if err != nil {
-		return "", errorss.Wrap(err, "docker: couldn't retrieve the output for grep for standard Lister")
+	if err != nil && !strings.Contains("exit status 1", err.Error()) {
+		return "", errorss.Wrap(err, "docker: couldn't filter container names for standard Lister")
 	}
 
 	return string(out), nil
