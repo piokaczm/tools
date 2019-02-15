@@ -28,6 +28,10 @@ func NewYAMLDictionary(path string) (*YAMLDictionary, error) {
 	return y, err
 }
 
+func (y *YAMLDictionary) Add(name string, cmd Command) error {
+	return nil
+}
+
 // Get returns a translation for a provided name.
 func (y *YAMLDictionary) Get(name string) (Command, error) {
 	cmd, ok := y.translations[name]
