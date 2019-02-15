@@ -44,8 +44,11 @@ func Invoke(args []string) error {
 	case "help", "--help", "-h": // TODO: properly handle flags
 		fmt.Println(helpText)
 	default:
-		if err := translate(args); err != nil {
-			fmt.Println(helpText + "\n")
+		err := translate(args)
+		if _, ok := err.(docker.CommandError); ok {
+			err = fmt.Errorf("%s, see 'siu -help' for help", err)
+		}
+		if err != nil {
 			return err
 		}
 	}

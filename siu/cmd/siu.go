@@ -9,7 +9,7 @@ import (
 
 func main() {
 	if err := cli.Invoke(os.Args[1:]); err != nil {
-		fmt.Printf("error: %s\n", err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	os.Exit(0)

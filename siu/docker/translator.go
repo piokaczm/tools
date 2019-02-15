@@ -80,12 +80,12 @@ func New(args []string) (*Translator, error) {
 // builds a final docker command.
 func (t *Translator) Translate(command string) (string, error) {
 	if command == "" {
-		return "", ErrEmptyCommand
+		return "", NewCommandError(ErrEmptyCommand, emptyCommand)
 	}
 
 	translation, err := t.Get(command)
 	if err != nil {
-		return "", err
+		return "", NewCommandError(err, translationError)
 	}
 
 	containers, commandArgs := t.splitArguments(translation)
