@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -19,6 +20,8 @@ var (
 	ErrEmptyArgs = errors.New("docker: no containers names/command arguments provided")
 	// ErrWrongUserInput is returned when a user provided a response to the interactive prompt which is not valid.
 	ErrWrongUserInput = errors.New("wrong input, non existing option was chosen")
+	// ErrDockerUnavailable is returned when docker is not available.
+	ErrDockerUnavailable = errors.New("docker is not available")
 )
 
 // Lister is an interface describing an entity that can list docker images and possibly filter them
@@ -79,6 +82,10 @@ func New(args []string) (*Translator, error) {
 // Translate lists docker containers and greps the output according to passed params and based on that
 // builds a final docker command.
 func (t *Translator) Translate(command string) (string, error) {
+	if err := checkDockerStatus(); err != nil {
+		return "", ErrDockerUnavailable
+	}
+
 	if command == "" {
 		return "", NewCommandError(ErrEmptyCommand, emptyCommand)
 	}
@@ -216,4 +223,8 @@ func (t *Translator) promptForInput(options []string) (string, error) {
 	}
 
 	return strings.TrimSpace(input), nil
+}
+
+func checkDockerStatus() error {
+	return exec.Command("docker", "ps").Run()
 }
