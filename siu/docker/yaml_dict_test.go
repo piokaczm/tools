@@ -118,27 +118,23 @@ func assertTranslationAdded(t *testing.T, path string, cmd Command) {
 			continue
 		}
 
-		if name && translation {
-			if strings.Contains(line, strconv.FormatBool(cmd.AllowMultipleContainers)) {
-				count++
-				continue
-			} else {
-				t.Errorf("command %v not found in the config file", cmd)
-			}
+		if name && translation && strings.Contains(line, strconv.FormatBool(cmd.AllowMultipleContainers)) {
+			count++
+			continue
 		}
 
-		if name {
-			if strings.Contains(line, cmd.Translation) {
-				translation = true
-				continue
-			} else {
-				t.Errorf("command %v not found in the config file", cmd)
-			}
+		if name && strings.Contains(line, cmd.Translation) {
+			translation = true
+			continue
 		}
 	}
 
+	if !(name && translation) {
+		t.Errorf("command %v not found in the config file", cmd)
+	}
+
 	if count != 1 {
-		t.Errorf("there should be only one instance of command %v, found %d times", cmd, count)
+		t.Errorf("there should be one instance of command %v, found %d times", cmd, count)
 	}
 }
 
